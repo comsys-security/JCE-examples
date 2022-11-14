@@ -95,7 +95,7 @@ class RSA_gen {
 	  static Certificate makeDummyCertificate(final KeyPair aKeyPair, final String aProviderName) {
 		final Certificate theResult =
 			new Certificate(aProviderName) {
-			  @Override
+			  @Override 
 			  public String toString() {
 				final String theObjectString = ((Object) this).toString();
 				final String theResult =
