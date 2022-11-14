@@ -3,8 +3,6 @@
     "java.project.outputPath": "bin",
     "java.project.referencedLibraries": [
         "lib/**/*.jar",
-        "/opt/nfast/java/classes/nCipherKM.jar",
-        "/home/comsys/bcprov-jdk16-1.46.jar",
-        "/home/comsys/bcprov-jdk15on-168.jar"
+        "/opt/nfast/java/classes/nCipherKM.jar"
     ]
 }
