@@ -6,7 +6,6 @@ import java.security.*;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.cert.Certificate;
-import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 
@@ -14,15 +13,15 @@ import java.util.Base64.Encoder;
 
 
 /**
- * ECDSA Key Generation example.
+ * EDDSA Key Generation example.
  *
- * <p>Demonstrates creation of a card-protected keystore and the creation of an ECDSA key pair.
+ * <p>Demonstrates creation of a card-protected keystore and the creation of an EDDSA key pair.
  * Requires an OCS card with passphrase 'comsys2019'
  */
-public class ECDSA_Gen_Sign {
+public class EDDSA_Gen_Sign {
   public static void main(String[] args) throws GeneralSecurityException, IOException {
     char[] CARDSET_PASSPHRASE = "comsys2019".toCharArray();
-    String keyalias = "ECDSA Key";
+    String keyalias = "EDDSA Key";
     Security.addProvider(new nCipherKM());
     // Create a cardset protected keystore.
     //System.setProperty("protect", "softcard:e128c587cef300747fcd088243713881f7fe6eb7");
@@ -33,16 +32,16 @@ public class ECDSA_Gen_Sign {
     Signature verifier = null;
     int nBytes = 100;     //Ramdom nBytes
 	
-    // Generate an ECDSA keypair
-	  ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");  //secp256r1 curve
-    KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDSA", "nCipherKM");
-	  kpg.initialize(ecSpec);
+    // Generate an EDDSA keypair
+    KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519", "nCipherKM");
+    int keySizeBits = 256;
+    kpg.initialize(keySizeBits);
 
     KeyPair keyPair = kpg.generateKeyPair();
     PrivateKey privKey = keyPair.getPrivate();
     PublicKey pubKey = keyPair.getPublic();
 
-    System.out.println("Generated an ECDSA keypair of type: " + privKey.getAlgorithm());
+    System.out.println("Generated an EDDSA keypair of type: " + privKey.getAlgorithm());
     System.out.println("The encoded public key is: " + HexFunctions.byte2hex(pubKey.getEncoded()));
 
     KeyStore ks = KeyStore.getInstance("ncipher.sworld", "nCipherKM");
@@ -50,19 +49,19 @@ public class ECDSA_Gen_Sign {
     System.out.println("Created keystore");
 
     // Add the public EC key to the keystore.
-    ks.setKeyEntry(keyalias, pubKey, CARDSET_PASSPHRASE, null);
-    System.out.println("Added ECDSAPublicKey to keystore");
+    ks.setKeyEntry(keyalias , pubKey, CARDSET_PASSPHRASE, null);
+    System.out.println("Added EDDSAPublicKey to keystore");
 
 
-	  // Generate an ECDSA certificate
+	  // Generate an EDDSA certificate
     final Certificate certificate = makeDummyCertificate(keyPair, "nCipherKM");
     Certificate[] certChain = new Certificate[] {certificate};
     
     // Add the private EC key to the keystore.
     ks.setKeyEntry(keyalias , privKey, CARDSET_PASSPHRASE, certChain);
-    System.out.println("Added ECDSAPrivateKey to keystore");
+    System.out.println("Added EDDSAPrivateKey to keystore");
 	
-	  System.out.println("Generated an ECDSA keypair of type: " + privKey.getAlgorithm());
+	  System.out.println("Generated an EDDSA keypair of type: " + privKey.getAlgorithm());
     System.out.println("The encoded public key is: " + HexFunctions.byte2hex(pubKey.getEncoded()));
 	
     // Generate some random data to sign. //
@@ -72,7 +71,7 @@ public class ECDSA_Gen_Sign {
     random.nextBytes(plainText);
     
     // Init sign
-    signer = Signature.getInstance("Sha256withECDSA", "nCipherKM");
+    signer = Signature.getInstance("Ed25519", "nCipherKM");
     signer.initSign(privKey);
 	
 	  // Signing of random data  //
@@ -89,7 +88,7 @@ public class ECDSA_Gen_Sign {
     System.out.println( "========================================================" );
 
     // Verify the signature. //
-    verifier = Signature.getInstance("Sha256withECDSA", "nCipherKM");
+    verifier = Signature.getInstance("Ed25519", "nCipherKM");
     System.out.print("Verifying the signature ... ");
     verifier.initVerify(pubKey);
     verifier.update(plainText);
