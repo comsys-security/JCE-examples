@@ -1,3 +1,4 @@
+package EC;
 
 /**
  * ECDH Key Agreement example.
