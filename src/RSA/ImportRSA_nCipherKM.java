@@ -17,7 +17,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.Security;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
@@ -26,24 +25,25 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
 import java.util.Date;
-import java.security.spec.RSAPublicKeySpec;
+import java.util.Base64.Decoder;
+
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+
 import java.security.spec.X509EncodedKeySpec;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import com.ncipher.provider.km.nCipherKM;
-import sun.security.rsa.RSAPrivateCrtKeyImpl;
-
-import sun.security.x509.AlgorithmId;
-import sun.security.x509.CertificateAlgorithmId;
-import sun.security.x509.CertificateIssuerName;
-import sun.security.x509.CertificateSerialNumber;
-import sun.security.x509.CertificateSubjectName;
-import sun.security.x509.CertificateValidity;
-import sun.security.x509.CertificateVersion;
-import sun.security.x509.CertificateX509Key;
-import sun.security.x509.X500Name;
-import sun.security.x509.X509CertImpl;
-import sun.security.x509.X509CertInfo;
 
 
 public class ImportRSA_nCipherKM {
@@ -61,13 +61,13 @@ public class ImportRSA_nCipherKM {
 	public static void main(String[] args) throws Exception {
 		Security.addProvider(new nCipherKM());		
 		//TODO slot hash 
-		System.setProperty("protect", "module");
+		//System.setProperty("protect", "module");
 		
 		//TODO  privateKey file
-		String privateKeyPath = "/home/comsys/work/JCE/RSA_ENCRYPT/src/test.pem";
-		String publicKeyPath = "/home/comsys/work/JCE/RSA_ENCRYPT/src/test_pub.der";
+		String privateKeyPath = "test.pem";
+		String publicKeyPath = "test_pub.der";
 		
-		String alias = "importrsa2048tzlogsm8350_test_key";
+		String alias = "Import_Key";
 		System.out.println(alias);
 		
 		// key pair
@@ -147,14 +147,8 @@ public class ImportRSA_nCipherKM {
 	public static byte[] b64Decode(String b64encoded)
 	{
 	    byte[] plainText = null;
-	    try
-	    {
-	        sun.misc.BASE64Decoder decoder = new sun.misc.BASE64Decoder();
-	        plainText = decoder.decodeBuffer(b64encoded);
-	    }
-	    catch (IOException ex)
-	    {
-        }
+	    Decoder decoder = Base64.getDecoder();
+		plainText = decoder.decode(b64encoded);
         return plainText;
 	}
 	public static String toHexString(byte[] block) {
@@ -175,45 +169,23 @@ public class ImportRSA_nCipherKM {
 		return buf.toString();
 	}
 
-	public static X509Certificate generateCertificate(
-			//X500Principal subjectDN,	 
-			PublicKey pubKey,			 
-			PrivateKey signatureKey		 
-			//X509Certificate caCert,		 
-			//CertType type
-			)				
-		throws NoSuchProviderException,NoSuchAlgorithmException,SignatureException,InvalidKeyException,IOException, CertificateException
+	public static X509Certificate generateCertificate(PublicKey publickey , PrivateKey privateKey) 
+	throws NoSuchProviderException,NoSuchAlgorithmException,SignatureException,InvalidKeyException,IOException, CertificateException, OperatorCreationException
 		{
-		String dn = "CN=Test, L=Seoul, C=KR";
-		int days = 365;
-		String algorithm = "SHA256withRSA";
-		PrivateKey privkey = signatureKey;
-		X509CertInfo info = new X509CertInfo();
-		Date from = new Date();
-		Date to = new Date(from.getTime() + days * 86400000l);
-		CertificateValidity interval = new CertificateValidity(from, to);
-		BigInteger sn = new BigInteger(64, new SecureRandom());
-		X500Name owner = new X500Name(dn);
-			 
-		info.set(X509CertInfo.VALIDITY, interval);
-		info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(sn));
-		info.set(X509CertInfo.SUBJECT, owner);
-		info.set(X509CertInfo.ISSUER, owner);
-		info.set(X509CertInfo.KEY, new CertificateX509Key(pubKey));
-		info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3));
-		AlgorithmId algo = new AlgorithmId(AlgorithmId.md5WithRSAEncryption_oid);
-		info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algo));
-			 
-		// Sign the cert to identify the algorithm that's used.
-		X509CertImpl cert = new X509CertImpl(info);
-		cert.sign(privkey, algorithm);
-			 
-		// Update the algorith, and resign.
-		algo = (AlgorithmId)cert.get(X509CertImpl.SIG_ALG);
-		info.set(CertificateAlgorithmId.NAME + "." + CertificateAlgorithmId.ALGORITHM, algo);
-		cert = new X509CertImpl(info);
-		cert.sign(privkey, algorithm);
-		return cert;
+			BigInteger serialNumber = BigInteger.valueOf(System.currentTimeMillis());
+			Instant validFrom = Instant.now();
+			Instant validUntil = validFrom.plus(10 * 360, ChronoUnit.DAYS);
+			
+			Security.addProvider(new BouncyCastleProvider());
+			String principal ="CN=Self Comsys, C=Korea, ST=comsys, L=comsys, O=comsys, OU=comsys, EMAILADDRESS=jk.jo@pro-comsys.com";
+			X500Name owner = new X500Name(principal);
+			X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
+				owner, serialNumber, Date.from(validFrom), Date.from(validUntil), owner, publickey);
+			ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSA").build(privateKey);
+			X509CertificateHolder certHolder = builder.build(signer);
+			X509Certificate cert = new JcaX509CertificateConverter().setProvider("BC").getCertificate(certHolder);
+			cert.verify(publickey);
+			return cert;
 	}
 }
 
